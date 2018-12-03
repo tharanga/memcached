@@ -1273,8 +1273,7 @@ static void complete_nread_ascii(conn *c) {
     pthread_mutex_unlock(&c->thread->stats.mutex);
 
     if ((it->it_flags & ITEM_CHUNKED) == 0) {
-        // HACK
-        if (c->ssl || strncmp(ITEM_data(it) + it->nbytes - 2, "\r\n", 2) == 0) {
+        if (strncmp(ITEM_data(it) + it->nbytes - 2, "\r\n", 2) == 0) {
             is_valid = true;
         }
     } else {
@@ -1294,8 +1293,7 @@ static void complete_nread_ascii(conn *c) {
             buf[0] = ch->prev->data[ch->prev->used - 1];
             buf[1] = ch->data[ch->used - 1];
         }
-        // HACK
-        if (c->ssl || strncmp(buf, "\r\n", 2) == 0) {
+        if (strncmp(buf, "\r\n", 2) == 0) {
             is_valid = true;
         } else {
             assert(1 == 0);
@@ -4216,8 +4214,7 @@ static void process_update_command(conn *c, token_t *tokens, const size_t ntoken
 #else
     c->ritem = ITEM_data(it);
 #endif
-    // HACK
-    c->rlbytes = it->nbytes - (c->ssl ?  1 : 0);
+    c->rlbytes = it->nbytes;
     c->cmd = comm;
     conn_set_state(c, conn_nread);
 }
