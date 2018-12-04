@@ -163,19 +163,27 @@ ssize_t ssl_read(void *arg, void *buf, size_t count) {
     return SSL_read(c->ssl, buf, count);
 }
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
 ssize_t ssl_write(void *arg, struct msghdr *msg, int flags) {
     conn *c = (conn*)arg;
-    ssize_t res = 0;
-    ssize_t len;
-    while (msg->msg_iovlen > 0) {
-        len = SSL_write(c->ssl, msg->msg_iov->iov_base, msg->msg_iov->iov_len);
-        if (len < 0) return len;
-        if (len == 0) continue;
-        res += len;
-        msg->msg_iovlen--;
-        msg->msg_iov++;
+    char *buffer;
+    size_t bytes, to_copy;
+    int i;
+    bytes = 0;
+    for (i = 0; i < msg->msg_iovlen; ++i)
+        bytes += msg->msg_iov[i].iov_len;
+    buffer = (char *) alloca(bytes);
+    to_copy = bytes;
+    char *bp = buffer;
+    for (i = 0; i < msg->msg_iovlen; ++i) {
+        size_t copy = MIN (to_copy, msg->msg_iov[i].iov_len);
+        memcpy((void*)bp, (void*)msg->msg_iov[i].iov_base, copy);
+        bp +=  copy;
+        to_copy -= copy;
+        if (to_copy == 0)
+            break;
     }
-    return res;
+    return SSL_write(c->ssl, buffer, bytes);
 }
 
 /* Standard thread-ID functions required by openssl */
